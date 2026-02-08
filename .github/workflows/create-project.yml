@@ -16,37 +16,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Create repository from template
+      - name: Create repo from template and clone
         env:
           GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
         run: |
           SERVICE="${{ inputs.service_name }}"
           VIS="${{ inputs.visibility }}"
 
-          # 1) Crear repo usando el template
           gh repo create platform-engi/${SERVICE} \
             --template platform-engi/tpl-spring-reactive-openapi \
             --${VIS} \
-            --confirm
+            --confirm \
+            --clone
 
-      - name: Checkout new repo
-        env:
-          GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
+      - name: Verify repo content
         run: |
           SERVICE="${{ inputs.service_name }}"
-          gh repo clone platform-engi/${SERVICE} newrepo
+          cd "${SERVICE}"
+          echo "Listing files:"
+          ls -la
+          echo "Git status:"
+          git status
+          echo "Commits:"
+          git log --oneline -n 5 || true
+
+          # Si está vacío, fallamos con mensaje claro
+          FILECOUNT=$(find . -maxdepth 2 -type f | wc -l | tr -d ' ')
+          if [ "$FILECOUNT" -le 3 ]; then
+            echo "ERROR: Repo seems empty or template did not copy files. Check template repo has commits and files."
+            exit 1
+          fi
 
       - name: Replace placeholders
         run: |
           SERVICE="${{ inputs.service_name }}"
-          cd newrepo
+          cd "${SERVICE}"
+
+          # No fallar si no hay placeholders
           grep -rl "__SERVICE_NAME__" . | xargs -r sed -i "s/__SERVICE_NAME__/${SERVICE}/g"
 
-      - name: Commit bootstrap
+      - name: Commit & push bootstrap
         run: |
-          cd newrepo
+          SERVICE="${{ inputs.service_name }}"
+          cd "${SERVICE}"
+
           git config user.name "platform-bot"
           git config user.email "platform-bot@users.noreply.github.com"
+
           git add .
-          git commit -m "chore: bootstrap service" || echo "No changes"
+          git diff --cached --quiet && echo "No changes to commit" || git commit -m "chore: bootstrap ${SERVICE}"
           git push
