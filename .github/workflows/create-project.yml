@@ -1,0 +1,52 @@
+name: Create Spring Reactive Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_name:
+        description: "Nombre del servicio (kebab-case). Ej: customer-api"
+        required: true
+      visibility:
+        description: "private o public"
+        required: true
+        default: "private"
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create repository from template
+        env:
+          GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
+        run: |
+          SERVICE="${{ inputs.service_name }}"
+          VIS="${{ inputs.visibility }}"
+
+          # 1) Crear repo usando el template
+          gh repo create platform-engi/${SERVICE} \
+            --template platform-engi/tpl-spring-reactive-openapi \
+            --${VIS} \
+            --confirm
+
+      - name: Checkout new repo
+        env:
+          GH_TOKEN: ${{ secrets.ORG_ADMIN_TOKEN }}
+        run: |
+          SERVICE="${{ inputs.service_name }}"
+          gh repo clone platform-engi/${SERVICE} newrepo
+
+      - name: Replace placeholders
+        run: |
+          SERVICE="${{ inputs.service_name }}"
+          cd newrepo
+          grep -rl "__SERVICE_NAME__" . | xargs sed -i "s/__SERVICE_NAME__/${SERVICE}/g"
+
+      - name: Commit bootstrap
+        run: |
+          cd newrepo
+          git config user.name "platform-bot"
+          git config user.email "platform-bot@users.noreply.github.com"
+          git add .
+          git commit -m "chore: bootstrap service" || echo "No changes"
+          git push
