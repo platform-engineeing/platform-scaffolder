@@ -40,7 +40,7 @@ jobs:
         run: |
           SERVICE="${{ inputs.service_name }}"
           cd newrepo
-          grep -rl "__SERVICE_NAME__" . | xargs sed -i "s/__SERVICE_NAME__/${SERVICE}/g"
+          grep -rl "__SERVICE_NAME__" . | xargs -r sed -i "s/__SERVICE_NAME__/${SERVICE}/g"
 
       - name: Commit bootstrap
         run: |
