@@ -93,10 +93,17 @@ jobs:
           run_url = os.environ["RUN_URL"]
           service = os.environ["SERVICE"]
           webhook_url = os.environ["PORT_WEBHOOK_URL"]
+          current_dir = pathlib.Path(__file__).parent
+          openapi_path = current_dir / "api" / "openapi.yaml"
           
-          # Lee OpenAPI YAML
-          openapi_path = pathlib.Path("api/openapi.yaml")
-          open_api = openapi_path.read_text(encoding="utf-8") if openapi_path.exists() else ""
+          print(f"Buscando archivo en: {openapi_path}")
+          
+          if openapi_path.exists():
+              open_api = openapi_path.read_text(encoding="utf-8")
+              print("OpenAPI cargado correctamente")
+          else:
+              open_api = ""
+              print("No se encontró el archivo api/openapi.yaml")
           
           payload = {
               "microservicio": {
