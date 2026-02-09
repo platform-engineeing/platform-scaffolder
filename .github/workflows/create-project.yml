@@ -80,5 +80,5 @@ jobs:
           BRANCH: main
           RUN_URL: https://github.com/platform-001/${{ inputs.repo_name }}/actions
         run: |
-          cd "${REPO}"
-          python3 $GITHUB_WORKSPACE/scripts/report_to_port.py
+          cd $GITHUB_WORKSPACE
+          python3 ./scripts/report_to_port.py
