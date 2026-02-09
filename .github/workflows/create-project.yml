@@ -83,42 +83,37 @@ jobs:
           cd "${REPO}"
 
           python - << 'PY'
-          import json, pathlib, os
+import json, pathlib, os
+repo = os.environ["REPO"]
+branch = os.environ["BRANCH"]
+run_url = os.environ["RUN_URL"]
+
+# Lee OpenAPI YAML
+openapi_path = pathlib.Path("api/openapi.yaml")
+open_api = openapi_path.read_text(encoding="utf-8") if openapi_path.exists() else ""
+
+payload = {
+    "microservicio": {
+        "cod_servicio": repo,
+        "nombre_servicio": repo,
+        "open_api": open_api,
+        "tecnologia": "Java",
+        "estado_de_aprovisionamiento": "Generado"
+    },
+    "branch": {
+        "codigo_branch": f"{repo}:{branch}",
+        "build_status": "Con errores",
+        "cobertura": 0,
+        "vulnerabilidades_altas": 0,
+        "secretos_encontrados": 0,
+        "url_pipeline": run_url
+    }
+}
+with open("payload.json", "w") as f:
+json.dump(payload, f)
+PY 
           
-          repo = os.environ["REPO"]
-          branch = os.environ["BRANCH"]
-          run_url = os.environ["RUN_URL"]
-          
-          # Lee OpenAPI YAML (ajusta ruta si tu template usa otra)
-          openapi_path = pathlib.Path("api/openapi.yaml")
-          
-          if openapi_path.exists():
-              open_api = openapi_path.read_text(encoding="utf-8")
-          else:
-              open_api = ""
-          
-          payload = {
-            "microservicio": {
-              "cod_servicio": repo,
-              "nombre_servicio": repo,
-              "open_api": open_api,
-              "tecnologia": "Java",
-              "estado_de_aprovisionamiento": "Generado"
-            },
-            "branch": {
-              "codigo_branch": f"{repo}:{branch}",
-              "build_status": "Con errores",
-              "cobertura": 0,
-              "vulnerabilidades_altas": 0,
-              "secretos_encontrados": 0,
-              "url_pipeline": run_url
-            }
-          }
-          
-          print(json.dumps(payload))
-          PY > payload.json
-          
-                    curl -sS -X POST \
-                      -H "Content-Type: application/json" \
-                      -d @payload.json \
-                      "$PORT_WEBHOOK_URL"
+        curl -sS -X POST \
+        -H "Content-Type: application/json" \
+        -d @payload.json \
+        "$PORT_WEBHOOK_URL"
