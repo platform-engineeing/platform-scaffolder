@@ -80,8 +80,49 @@ jobs:
           BRANCH: main
           RUN_URL: https://github.com/platform-001/${{ inputs.repo_name }}/actions
         run: |
-          cd $GITHUB_WORKSPACE
-          pwd
-          ls
-          cd ..
-          python3 scripts/report_to_port.py
+          cd "${REPO}"
+    
+          # Escribimos el script dinámicamente a un archivo temporal
+          cat << 'EOF' > report.py
+          import json, pathlib, os, requests
+          
+          repo = os.environ["REPO"]
+          branch = os.environ["BRANCH"]
+          run_url = os.environ["RUN_URL"]
+          webhook_url = os.environ["PORT_WEBHOOK_URL"]
+          
+          # Lee OpenAPI YAML
+          openapi_path = pathlib.Path("api/openapi.yaml")
+          open_api = openapi_path.read_text(encoding="utf-8") if openapi_path.exists() else ""
+          
+          payload = {
+              "microservicio": {
+                  "cod_servicio": repo,
+                  "nombre_servicio": repo,
+                  "open_api": open_api,
+                  "tecnologia": "Java",
+                  "estado_de_aprovisionamiento": "Generado"
+              },
+              "branch": {
+                  "codigo_branch": f"{repo}:{branch}",
+                  "build_status": "Con errores",
+                  "cobertura": 0,
+                  "vulnerabilidades_altas": 0,
+                  "secretos_encontrados": 0,
+                  "url_pipeline": run_url
+              }
+          }
+          
+          print(f"Enviando a Port: {repo}")
+          res = requests.post(webhook_url, json=payload)
+          res.raise_for_status()
+          EOF
+
+          # Ejecutamos el archivo que acabamos de crear
+          python3 report.py
+      
+          # Ahora ejecutamos CURL desde BASH, no desde Python
+          curl -sS -X POST \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            "$PORT_WEBHOOK_URL"
